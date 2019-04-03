@@ -1,0 +1,244 @@
+---
+title: "Tetrapods - Zonation based on species, functional and food web link diversity"
+author: 'Author: L Pollock'
+date: 'Last update: "`r Sys.Date()`"'
+output: pdf_document
+---
+  
+This code plots biodiversity accumulation curves and priority maps for Zonation outputs
+  
+
+Zonation Runs:
+
+Metawebs:
+1. Adult-only interactions 'LinksAdult'
+2. Interactions all life stages "LinksAll"
+
+Biodiversity categories:
+1. Species
+2. Predator-prey food web links (see metawebs options)  
+3. Stochastic Block Model Groups - Size 'GroupsSz'
+4. Stochastic Block Model Groups - Probability 'GroupsPr'
+
+Zonation optimization
+1. Core Area 'CAZ'
+2. Adtv Benefit Function 'ABF'
+
+Land Tenure
+1. Optimal - all of Europe considered
+2. eu - protected areas mask
+
+
+
+
+Step 1: summarize information for pixel-based removal from Zon files
+```{r, eval=FALSE}
+
+# functions page
+source("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/TetrapodFunctions.R")
+
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/ZonationOUT")
+
+outputs <- gsub(".rank.compressed.tif","",list.files(pattern = "rank.compressed.tif"))
+
+## subset to only runs for ENTIRE study area = 'optimal'
+outputs <- outputs[ grep("optimal",outputs) ]
+
+codes <- outputs
+
+Tetra.Array <- run.curves.Tetrapods(outputs,codes) 
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km")
+#save(Tetra.Array,file='Tetrapods.Array.Rdata')
+
+
+```
+
+
+
+
+
+Step 2: plot biod. accumulation curves - how much different biod. metrics are captured for % area protected
+```{r, eval=TRUE}
+
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km")
+source("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/TetrapodFunctions.R")
+
+load("Tetrapods.Array.Rdata")
+
+cArray <- Tetra.Array
+
+
+c1 <- "#878787"
+c2 <- "#d6604d"
+c3 <- "blue"
+
+layrs <- c(dimnames(cArray)[[3]])
+
+metrics <- c(dimnames(cArray)[[2]])
+
+
+
+#fig 1 -------------------------------------------
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km")
+
+#pdf(file="FigCurves1.pdf",width=12,height=8)
+
+par(mfrow=c(1,2))
+par(mar=c(5,5,2,2))
+cx <- 1.3
+
+#1. species 
+metrics <- rep("ScaledSumPropRichness",length(layrs))
+colrs <- c(rep(c1,4),rep(c2,2),rep(c3,2))
+linet <- c(rep(c(1,2),length(layrs)))
+
+plot.curve.ov(cArray,layrs,metrics,colrs,linet,xlim=c(0,0.2),ylim=c(0,1.0))
+axis(2,at = c(0.1,0.2,0.3,0.4,0.5,0.6,0.70,0.80,0.90,1.0),
+       labels=c(10,20,30,40,50,60,70,80,90,100),las=1, col="black", ylab="",col.lab='black',col.axis='black',cex=1.7)
+mtext("% Spatial Range Species Protected",side=2,col='black',padj=-3,cex=cx)
+
+axis(1,at = c(.10,.20,.30,.40,.50,.60,.70,.80,.90,1),
+     labels=c(10,20,30,40,50,60,70,80,90,100),las=1, col="black", ylab="",col.lab='black',col.axis='black',cex=1.7)
+mtext("% Land Protected",side=1,col='black',padj=2.5,cex=cx)
+
+
+legend("bottomright", # position
+         legend = c("Groups","Links","Species"),
+         lty = c(1,1),
+         title = "",
+         col = c(c1,c2,c3),
+         text.col = c(c1,c2,c3),
+         cex = 1,
+         bty = "n") # border
+
+#2. rare species  
+metrics <- rep("ScaledSumPropRichnessRareSp",length(layrs))
+
+plot.curve.ov(cArray,layrs,metrics,colrs,linet,xlim=c(0,0.2),ylim=c(0,1))
+axis(2,at = c(0.1,0.2,0.3,0.4,0.5,0.6,0.70,0.80,0.90,1.0),
+     labels=c(10,20,30,40,50,60,70,80,90,100),las=1, col="black", ylab="",col.lab='black',col.axis='black',cex=1.7)
+mtext("% Spatial Range Rare Sp. Prot.",side=2,col='black',padj=-3,cex=cx)
+
+axis(1,at = c(.10,.20,.30,.40,.50,.60,.70,.80,.90,1),
+     labels=c(10,20,30,40,50,60,70,80,90,100),las=1, col="black", ylab="",col.lab='black',col.axis='black',cex=1.7)
+mtext("% Land Protected",side=1,col='black',padj=2.5,cex=cx)
+
+legend("bottomright", # position
+       legend = c("Groups","Links","Species"),
+       lty = c(1,1),
+       title = "",
+       col = c(c1,c2,c3),
+       text.col = c(c1,c2,c3),
+       cex = 1,
+       bty = "n") # border
+
+#dev.off()
+#---------------------------------
+
+
+
+
+```
+
+
+
+
+
+
+Step 3: plot maps
+```{r, eval=TRUE}
+
+library(raster)
+library(RColorBrewer)
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/ZonationOUT/")
+outputs <- gsub(".rank.compressed.tif","",list.files(pattern = "rank.compressed.tif"))
+
+
+# optimal maps
+outputs <- outputs[grep('optimal',outputs)]
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/ZonationOUT/")
+
+gr.pr.abf.opt <- raster("GroupsPrABFoptimal10km.rank.compressed.tif")
+gr.pr.caz.opt <- raster("GroupsPrCAZoptimal10km.rank.compressed.tif")
+gr.sz.abf.opt <- raster("GroupsSzABFoptimal10km.rank.compressed.tif")
+gr.sz.caz.opt <- raster("GroupsSzCAZoptimal10km.rank.compressed.tif")
+li.ad.caz.opt <- raster("LinksAdultCAZoptimal10km.rank.compressed.tif")
+li.ad.abf.opt <- raster("LinksAdultABFoptimal10km.rank.compressed.tif")
+sp.abf.opt <- raster("SpeciesABFoptimal10km.rank.compressed.tif")
+sp.caz.opt <- raster("SpeciesCAZoptimal10km.rank.compressed.tif")
+
+
+
+#set up gradient colors
+
+# color brewer 6-class BuPu + one
+c1 <- "#edf8fb"
+c2 <- "#bfd3e6"
+c3 <- "#9ebcda" 
+c4 <- "#8c96c6"
+c5 <- "#8856a7" 
+c6 <- "#810f7c"
+c7 <- "#4c0013" #hex monochromatic
+#col.protected <- "#006d2c"
+
+
+breakpoints <- c(0,0.25,0.50,0.75,0.90,0.95,0.99,1.0)
+colz <- c(c1,c2,c3,c4,c5,c6,c7)
+
+
+setwd("~/Documents/Manuscripts/EuropeanFoodWebCons/ConservationLinksPaper/Zonation10km/")
+
+#png(filename = "TetraPriOptimalCAZ.png",width = 1200, height = 1200, units = "px")
+#caz
+par(mfrow=c(2,2))
+par(mar=c(.01,.01,.01,.01))
+plot(sp.caz.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='Species')
+plot(li.ad.caz.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='LinksAdult')
+plot(gr.pr.caz.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='GroupsPr')
+plot(gr.sz.caz.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='GroupsSz')
+#dev.off()
+
+
+#png(filename = "TetraPriOptimalABF.png",width = 1200, height = 1200, units = "px")
+#abf
+par(mfrow=c(2,2))
+par(mar=c(.01,.01,.01,.01))
+plot(sp.abf.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='Species')
+plot(gr.pr.abf.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='GroupsPr')
+plot(gr.sz.abf.opt,breaks=breakpoints,col=colz,axes=F,legend=F,box=F,main='GroupsSz')
+plot(1,1,col='white')
+legend("bottomright",inset=c(0,0), # position
+       legend = c("0-25", "25-50", "50-75","75-90","90-95","95-99","99-100","Protected"), 
+       title = "",
+       fill = colz,
+       cex = 1.5,
+       bty = "n") # border
+
+#ev.off()
+
+
+
+#png(filename = "DiffMaps.png",width = 1200, height = 600, units = "px")
+
+par(mfrow=c(1,2))
+diff <- li.ad.caz.opt - sp.caz.opt
+colors <- c( colorRampPalette(brewer.pal(8,'PuOr'))(8))
+
+breakpoints <- c(-1,-0.5,-0.2,-0.1,0,0.1,0.2,0.5,1)
+plot(diff,breaks=breakpoints,col=colors,axes=F,box=F,legend=T,main="Links minus species")
+
+diff <- gr.pr.caz.opt - sp.caz.opt
+plot(diff,breaks=breakpoints,col=colors,axes=F,box=F,legend=T,main="Groups minus species")
+#dev.off()         
+
+
+
+
+
+
+```
